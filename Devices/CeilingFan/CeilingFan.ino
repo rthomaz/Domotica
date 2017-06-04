@@ -1,20 +1,8 @@
 /*
- * ESP8266 Web server with Web Socket to control an LED.
- *
- * The web server keeps all clients' LED status up to date and any client may
- * turn the LED on or off.
- *
- * For example, clientA connects and turns the LED on. This changes the word
- * "LED" on the web page to the color red. When clientB connects, the word
- * "LED" will be red since the server knows the LED is on.  When clientB turns
- * the LED off, the word LED changes color to black on clientA and clientB web
- * pages.
- *
- * References:
- *
- * https://github.com/Links2004/arduinoWebSockets
- *
- */
+  CeilingFan - Library for Ceiling Fan With Led Light code.
+  Created by Rodrigo Thomaz, June 4, 2017.
+  Released into the public domain.
+*/
  
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
@@ -22,27 +10,28 @@
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
 
+#include <C:\Users\Rodrigo\Documents\GitHub\Domotica\Devices\CeilingFan\LedLight.h>
+#include <C:\Users\Rodrigo\Documents\GitHub\Domotica\Devices\CeilingFan\CeilingFanCore.h>
+
 #define MEM_ALOC_SIZE 4
 
 const char* host = "CeilingFan";
 const char* ssid = "RThomaz";
 const char* password = "2919517400";
 
-// These constants won't change.  They're used to give names
-// to the pins used:
-const int digitalOutPinLamp = 5;                      // Digital output pin that the LED is attached to
-const int digitalOutPinFanDirectionForward = 4;       // Digital output pin that the Fan Direction Forward is attached to
-const int digitalOutPinFanDirectionReverse = 13;      // Digital output pin that the Fan Direction Reverse is attached to
-const int analogOutPinFanSpeed = 16;                  // Analog output pin that the Fan Speed is attached to
-
-const int addressLastSpeedFanDirectionForward = 0;    // Address of last speed of fan direction forward
-const int addressLastSpeedFanDirectionReverse = 1;    // Address of default value of fan direction reverse
-
-const String fanDirectionNone = "none";
-const String fanDirectionForward = "forward";
-const String fanDirectionReverse = "reverse";
-
 ESP8266WebServer server(80);
+
+LedLight ledLight(
+      5   // Digital output pin that the LED is attached to 
+  );
+
+CeilingFanCore ceilingFanCore(
+      4   // Digital output pin that the Fan Direction Forward is attached to
+    , 13  // Digital output pin that the Fan Direction Reverse is attached to
+    , 16  // Analog output pin that the Fan Speed is attached to
+    , 0   // Address of last speed of fan direction forward
+    , 1   // Address of default value of fan direction reverse
+  );  
 
 static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 <!DOCTYPE html>
@@ -207,71 +196,11 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 </script>
 )rawliteral";
 
-byte getLastFanSpeed(String fanDirection){
-  if (fanDirection == fanDirectionForward)
-    return EEPROM.read(addressLastSpeedFanDirectionForward);
-  else if (fanDirection == fanDirectionReverse)
-    return EEPROM.read(addressLastSpeedFanDirectionReverse);
-  else if (fanDirection == fanDirectionNone)
-    return 0;
-}
-
-void setLastFanSpeed(String fanDirection, byte value){
-  if (fanDirection == fanDirectionForward)
-    EEPROM.write(addressLastSpeedFanDirectionForward, value);
-  else if (fanDirection == fanDirectionReverse)
-    EEPROM.write(addressLastSpeedFanDirectionReverse, value);  
-  EEPROM.commit();
-}
-
-String getCurrentFanDirection(){
-  int forward = digitalRead(digitalOutPinFanDirectionForward);
-  int reverse = digitalRead(digitalOutPinFanDirectionReverse);
-  if(forward == LOW && reverse == LOW){
-    return fanDirectionNone;
-  }
-  else if(forward == HIGH && reverse == LOW){
-    return fanDirectionForward;
-  }
-  else if(forward == LOW && reverse == HIGH){
-    return fanDirectionReverse;
-  }
-  else{
-    //erro 
-  }  
-}
-
-bool getCurrentLamp(){
-  int value = digitalRead(digitalOutPinLamp);
-  return value == HIGH;
-}
-
-String convertBoolToString(bool value){
-  if(value){
-    return "true";
-  }
-  else{
-    return "false";
-  }
-}
-
 void setup(void){
   
   Serial.begin(9600);
 
   EEPROM.begin(MEM_ALOC_SIZE);
-  
-  // prepare GPIO Lamp
-  pinMode(digitalOutPinLamp, OUTPUT);
-  digitalWrite(digitalOutPinLamp, LOW);
-
-  // prepare GPIO FanDirectionForward
-  pinMode(digitalOutPinFanDirectionForward, OUTPUT);
-  digitalWrite(digitalOutPinFanDirectionForward, LOW);
-
-  // prepare GPIO FanDirectionReverse
-  pinMode(digitalOutPinFanDirectionReverse, OUTPUT);
-  digitalWrite(digitalOutPinFanDirectionReverse, LOW);
   
   Serial.println();
   Serial.println("Booting Sketch...");
@@ -284,114 +213,25 @@ void setup(void){
     MDNS.begin(host);
       
     server.on("/", HTTP_GET, [](){
-      
-      String serverIndex = "";
-
-      serverIndex += "<!DOCTYPE html>\r\n";
-      serverIndex += "<html>\r\n";
-      serverIndex += "<head>\r\n";
-      serverIndex += "    <title></title>\r\n";
-      serverIndex += "  <meta charset='utf-8' />\r\n";
-      serverIndex += "</head>\r\n";
-      serverIndex += "<body>\r\n";
-      serverIndex += "    <form action='' title='Lâmpada'>\r\n";
-      serverIndex += "        <fieldset>\r\n";
-      serverIndex += "            <legend>Lâmpada</legend>\r\n";
-      serverIndex += "            <input type='radio' name='optLampadaOnOff' value='on'> Ligado<br>\r\n";
-      serverIndex += "            <input type='radio' name='optLampadaOnOff' value='off'> Desligado\r\n";
-      serverIndex += "        </fieldset>\r\n";
-      serverIndex += "        <fieldset>\r\n";
-      serverIndex += "            <legend>Ventilador</legend>\r\n";
-      serverIndex += "            <input type='radio' name='optVentiladorOnOff' value='on'> Ligado<br>\r\n";
-      serverIndex += "            <input type='radio' name='optVentiladorOnOff' value='off'> Desligado\r\n";
-      serverIndex += "        </fieldset>\r\n";
-      serverIndex += "        <fieldset>\r\n";
-      serverIndex += "            <legend>Direção</legend>\r\n";
-      serverIndex += "            <input type='radio' name='optVentiladorDirection' value='ventilador'> Ventilador<br>\r\n";
-      serverIndex += "            <input type='radio' name='optVentiladorDirection' value='exaustor'> Exaustor\r\n";
-      serverIndex += "        </fieldset>\r\n";
-      serverIndex += "        <fieldset>\r\n";
-      serverIndex += "            <legend>Velocidade</legend>\r\n";
-      serverIndex += "            <input type='range' min='0' max='100' />\r\n";
-      serverIndex += "        </fieldset>\r\n";
-      serverIndex += "    </form>\r\n";
-      serverIndex += "</body>\r\n";
-      serverIndex += "</html>\r\n";
-      serverIndex += "<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>\r\n";
-      serverIndex += "<script type='text/javascript'>\r\n";
-      serverIndex += "    var url = 'http://192.168.0.25/';\r\n";
-      serverIndex += "    $(document).ready(function () {\r\n";
-      serverIndex += "        $('input[type=radio][name=optLampadaOnOff]').change(function () {\r\n";
-      serverIndex += "            var postName = '';\r\n";
-      serverIndex += "            if (this.value == 'on') {\r\n";
-      serverIndex += "                postName += 'led5_on';\r\n";
-      serverIndex += "            }\r\n";
-      serverIndex += "            else if (this.value == 'off') {\r\n";
-      serverIndex += "                postName += 'led5_off';\r\n";
-      serverIndex += "            }\r\n";
-      serverIndex += "            $.ajax({\r\n";
-      serverIndex += "                url: url + postName,\r\n";
-      serverIndex += "                type: 'post',\r\n";
-      serverIndex += "                data: null,\r\n";
-      serverIndex += "                success: function (response) {\r\n";
-      serverIndex += "                    //Do Something                    \r\n";
-      serverIndex += "                },\r\n";
-      serverIndex += "                error: function (xhr) {\r\n";
-      serverIndex += "                    //Do Something to handle error\r\n";
-      serverIndex += "                }\r\n";
-      serverIndex += "            });\r\n";
-      serverIndex += "        });\r\n";
-      serverIndex += "        $('input[type=radio][name=optVentiladorOnOff]').change(function () {\r\n";
-      serverIndex += "            var postName = '';\r\n";
-      serverIndex += "            if (this.value == 'on') {\r\n";
-      serverIndex += "                postName += 'led4_on';\r\n";
-      serverIndex += "            }\r\n";
-      serverIndex += "            else if (this.value == 'off') {\r\n";
-      serverIndex += "                postName += 'led4_off';\r\n";
-      serverIndex += "            }\r\n";
-      serverIndex += "            $.ajax({\r\n";
-      serverIndex += "                url: url + postName,\r\n";
-      serverIndex += "                type: 'post',\r\n";
-      serverIndex += "                data: null,\r\n";
-      serverIndex += "                success: function (response) {\r\n";
-      serverIndex += "                    //Do Something                    \r\n";
-      serverIndex += "                },\r\n";
-      serverIndex += "                error: function (xhr) {\r\n";
-      serverIndex += "                    //Do Something to handle error\r\n";
-      serverIndex += "                }\r\n";
-      serverIndex += "            });\r\n";
-      serverIndex += "        });\r\n";
-      serverIndex += "    });\r\n";
-      serverIndex += "</script>\r\n";
-
       // send to client
       server.send(200, "text/html", INDEX_HTML);
     });
 
     server.on("/getCurrent", HTTP_GET, [](){
-      String fanDirection = getCurrentFanDirection();
-      bool lamp = getCurrentLamp();
-      byte fanSpeed = getLastFanSpeed(fanDirection);
-      String jsonResult = "{'lamp':" + convertBoolToString(lamp) + ",'fanDirection':'" + fanDirection + "','fanSpeed':" + String(fanSpeed) + "}";     
+      String lamp = ledLight.getPower() ? "true" : "false";
+      String fanDirection = ceilingFanCore.getFanDirection();     
+      String fanSpeed = String(ceilingFanCore.getFanSpeed());
+      String jsonResult = "{'lamp':" + lamp + ",'fanDirection':'" + fanDirection + "','fanSpeed':" + fanSpeed + "}";     
       server.send(200, "text/html", jsonResult);
     });
     
     server.on("/lamp", HTTP_POST, [](){      
-      // read the data in value:
-      String value = server.arg("value");
-      if (value == "true"){
-        // change the digital out value to true:
-        digitalWrite(digitalOutPinLamp, HIGH);
-      }
-      else if(value == "false"){
-        // change the digital out value to false:
-        digitalWrite(digitalOutPinLamp, LOW);
-      }  
-      else{
-        //error 
-      }          
+      // read args
+      bool value = server.arg("value") == "true" ? true : false;
+      // power on led light
+      ledLight.setPower(value);      
       // send to client
-      server.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");      
+      server.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");            
       // print the results to the serial monitor:
       Serial.print("Post Method = ");
       Serial.print("lamp");
@@ -401,29 +241,10 @@ void setup(void){
     });
     
     server.on("/fanDirection", HTTP_POST, [](){      
-      // read the data in value:
-      String value = server.arg("value");            
-      if (value == fanDirectionForward){
-        // change the digital out value to ventilator:
-        digitalWrite(digitalOutPinFanDirectionForward, HIGH);
-        digitalWrite(digitalOutPinFanDirectionReverse, LOW);        
-      }
-      else if(value == fanDirectionReverse){
-        // change the digital out value to fumeCupboard:
-        digitalWrite(digitalOutPinFanDirectionForward, LOW);
-        digitalWrite(digitalOutPinFanDirectionReverse, HIGH);
-      }  
-      else if(value == fanDirectionNone){
-        // change the digital out value to none:
-        digitalWrite(digitalOutPinFanDirectionForward, LOW);
-        digitalWrite(digitalOutPinFanDirectionReverse, LOW);
-      }  
-      else{
-        //error 
-      }               
-      // change the analog out value to fan speed:
-      byte fanSpeed = getLastFanSpeed(value);
-      analogWrite(analogOutPinFanSpeed, fanSpeed);
+      // read args
+      String value = server.arg("value");    
+      // set fan direction
+      byte fanSpeed = ceilingFanCore.setFanDirection(value);
       // send to client      
       String jsonResult = "{'fanSpeed':'" + String(fanSpeed) + "'}";
       server.send(200, "text/plain", jsonResult);      
@@ -439,12 +260,11 @@ void setup(void){
     });
 
     server.on("/fanSpeed", HTTP_POST, [](){            
-      // read the data in value:
+      // read args
       String fanDirection = server.arg("fanDirection");
       int value = server.arg("value").toInt();
-      // change the analog out value:
-      analogWrite(analogOutPinFanSpeed, value);
-      setLastFanSpeed(fanDirection, value);      
+      // set fan speed
+      ceilingFanCore.setFanSpeed(fanDirection, value);
       // send to client
       server.send(200, "text/plain", (Update.hasError())?"FAIL":"OK");
       // print the results to the serial monitor:
