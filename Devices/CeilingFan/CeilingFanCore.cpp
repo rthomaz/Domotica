@@ -51,21 +51,7 @@ String CeilingFanCore::getFanDirection()
 
 byte CeilingFanCore::setFanDirection(String value)
 {
-  if (value == _fanDirectionForward){
-    digitalWrite(_digitalOutPinFanDirectionForward, HIGH);
-    digitalWrite(_digitalOutPinFanDirectionReverse, LOW);        
-  }
-  else if(value == _fanDirectionReverse){
-    digitalWrite(_digitalOutPinFanDirectionForward, LOW);
-    digitalWrite(_digitalOutPinFanDirectionReverse, HIGH);
-  }  
-  else if(value == _fanDirectionNone){
-    digitalWrite(_digitalOutPinFanDirectionForward, LOW);
-    digitalWrite(_digitalOutPinFanDirectionReverse, LOW);
-  }  
-  else{
-    //error 
-  }
+  setFanDirectionIO(value);
   byte fanSpeed = getLastFanSpeed(value);
   analogWrite(_analogOutPinFanSpeed, fanSpeed);
   return fanSpeed;
@@ -79,6 +65,7 @@ byte CeilingFanCore::getFanSpeed()
 
 void CeilingFanCore::setFanSpeed(String fanDirection, byte value)
 {
+  setFanDirectionIO(fanDirection);
   analogWrite(_analogOutPinFanSpeed, value);
   setLastFanSpeed(fanDirection, value);      
 }
@@ -98,4 +85,23 @@ void CeilingFanCore::setLastFanSpeed(String fanDirection, byte value){
   else if (fanDirection == _fanDirectionReverse)
     EEPROM.write(_addressLastSpeedFanDirectionReverse, value);  
   EEPROM.commit();
+}
+
+void CeilingFanCore::setFanDirectionIO(String value)
+{
+  if (value == _fanDirectionForward){
+    digitalWrite(_digitalOutPinFanDirectionForward, HIGH);
+    digitalWrite(_digitalOutPinFanDirectionReverse, LOW);        
+  }
+  else if(value == _fanDirectionReverse){
+    digitalWrite(_digitalOutPinFanDirectionForward, LOW);
+    digitalWrite(_digitalOutPinFanDirectionReverse, HIGH);
+  }  
+  else if(value == _fanDirectionNone){
+    digitalWrite(_digitalOutPinFanDirectionForward, LOW);
+    digitalWrite(_digitalOutPinFanDirectionReverse, LOW);
+  }  
+  else{
+    //error 
+  }
 }

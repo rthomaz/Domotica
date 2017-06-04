@@ -24,6 +24,7 @@ class CeilingFanCore
     int _addressLastSpeedFanDirectionReverse;   // Address of default value of fan direction reverse
     byte getLastFanSpeed(String fanDirection);
     void setLastFanSpeed(String fanDirection, byte value);
+    void setFanDirectionIO(String value);
 };
 
 #endif

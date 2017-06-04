@@ -140,7 +140,7 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
         $('input[type=radio][name=optLamp]').change(function () {
             var data = 'value=' + this.value;
             $.ajax({
-                url: url + 'lamp',
+                url: url + 'setPowerLamp',
                 type: 'post',
                 data: data,
                 success: function (response) {
@@ -156,7 +156,7 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
             var fanDirection = this.value;
             var data = 'value=' + fanDirection;
             $.ajax({
-                url: url + 'fanDirection',
+                url: url + 'setFanDirection',
                 type: 'post',
                 data: data,
                 success: function (response) {
@@ -174,7 +174,7 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
             var fanDirection = $('input[type=radio][name=optFanDirection]:checked').val();
             var data = 'fanDirection=' + fanDirection + '&value=' + this.value;
             $.ajax({
-                url: url + 'fanSpeed',
+                url: url + 'setFanSpeed',
                 type: 'post',
                 data: data,
                 success: function (response) {
@@ -215,17 +215,28 @@ void setup(void){
     server.on("/", HTTP_GET, [](){
       // send to client
       server.send(200, "text/html", INDEX_HTML);
+      // print the results to the serial monitor:
+      Serial.print("Get Method = ");
+      Serial.print("/");
     });
 
     server.on("/getCurrent", HTTP_GET, [](){
+      // read args
       String lamp = ledLight.getPower() ? "true" : "false";
       String fanDirection = ceilingFanCore.getFanDirection();     
-      String fanSpeed = String(ceilingFanCore.getFanSpeed());
+      String fanSpeed = String(ceilingFanCore.getFanSpeed());      
       String jsonResult = "{'lamp':" + lamp + ",'fanDirection':'" + fanDirection + "','fanSpeed':" + fanSpeed + "}";     
+      // send to client
       server.send(200, "text/html", jsonResult);
+      // print the results to the serial monitor:
+      Serial.print("Get Method = ");
+      Serial.print("getCurrent");
+      Serial.print(" | ");
+      Serial.print("jsonResult = ");
+      Serial.println(jsonResult);
     });
     
-    server.on("/lamp", HTTP_POST, [](){      
+    server.on("/setPowerLamp", HTTP_POST, [](){      
       // read args
       bool value = server.arg("value") == "true" ? true : false;
       // power on led light
@@ -240,7 +251,7 @@ void setup(void){
       Serial.println(value);
     });
     
-    server.on("/fanDirection", HTTP_POST, [](){      
+    server.on("/setFanDirection", HTTP_POST, [](){      
       // read args
       String value = server.arg("value");    
       // set fan direction
@@ -259,7 +270,7 @@ void setup(void){
       Serial.println(fanSpeed);
     });
 
-    server.on("/fanSpeed", HTTP_POST, [](){            
+    server.on("/setFanSpeed", HTTP_POST, [](){            
       // read args
       String fanDirection = server.arg("fanDirection");
       int value = server.arg("value").toInt();
