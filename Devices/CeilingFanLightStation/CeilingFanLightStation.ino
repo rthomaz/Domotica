@@ -15,7 +15,7 @@
 
 #define MEM_ALOC_SIZE 4
 
-const char* host = "CeilingFan";
+const char* host = "CeilingFanLightStation";
 const char* ssid = "RThomaz";
 const char* password = "2919517400";
 
