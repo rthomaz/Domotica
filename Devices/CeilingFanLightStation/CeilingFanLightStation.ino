@@ -10,8 +10,9 @@
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
 
-#include <C:\Users\Rodrigo\Documents\GitHub\Domotica\Devices\CeilingFanLightStation\LedLight.h>
-#include <C:\Users\Rodrigo\Documents\GitHub\Domotica\Devices\CeilingFanLightStation\CeilingFan.h>
+#include <LedLight.h>
+#include <CeilingFan.h>
+#include <Settings.h>
 
 #define MEM_ALOC_SIZE 4
 
@@ -196,6 +197,103 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 </script>
 )rawliteral";
 
+static const char PROGMEM SETTINGS_HTML[] = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* Center the loader */
+        .loader {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 1;
+            width: 150px;
+            height: 150px;
+            margin: -75px 0 0 -75px;
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            -webkit-animation: spin 2s linear infinite;
+            animation: spin 2s linear infinite;
+            display:none;
+        }
+
+        @-webkit-keyframes spin {
+            0% {
+                -webkit-transform: rotate(0deg);
+            }
+
+            100% {
+                -webkit-transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }        
+    </style>
+    <title></title>
+  <meta charset='utf-8' />
+</head>
+<body>
+    <form id="form" action='' title='Lâmpada'>
+        <fieldset>
+            <legend>Field 1</legend>
+            
+        </fieldset>
+        <fieldset>
+            <legend>Field 2</legend>
+            
+        </fieldset>
+        <fieldset>
+            <legend>Field 3</legend>
+            
+        </fieldset>
+    </form>
+    <div class="loader"></div>
+</body>
+</html>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
+
+<script type='text/javascript'>
+
+    var url = 'http://192.168.0.25/';
+
+    jQuery.ajaxSetup({
+        beforeSend: function () {
+            $('.loader').show();
+            $('#form').hide();
+        },
+        complete: function () {
+            $('.loader').hide();
+            $('#form').show();
+        },
+        success: function () { }
+    });
+
+    $(document).ready(function () {
+
+        
+    });
+
+    function convertToJSON(value) {
+        value = value.replace(/'/g, '!@#').replace(/"/g, "'").replace(/!@#/g, '"');
+        return JSON.parse(value);
+    }
+
+</script>
+)rawliteral";
+
 void setup(void){
   
   Serial.begin(9600);
@@ -218,6 +316,14 @@ void setup(void){
       // print the results to the serial monitor:
       Serial.print("Get Method = ");
       Serial.print("/");
+    });
+
+    server.on("/settings", HTTP_GET, [](){
+      // send to client
+      server.send(200, "text/html", SETTINGS_HTML);
+      // print the results to the serial monitor:
+      Serial.print("Get Method = ");
+      Serial.print("/settings");
     });
 
     server.on("/getCurrent", HTTP_GET, [](){
