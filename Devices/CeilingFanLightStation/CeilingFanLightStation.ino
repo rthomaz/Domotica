@@ -1,5 +1,5 @@
 /*
-  CeilingFan - Library for Ceiling Fan With Led Light code.
+  CeilingFanLightStation - Library for Ceiling Fan Light Station code.
   Created by Rodrigo Thomaz, June 4, 2017.
   Released into the public domain.
 */
