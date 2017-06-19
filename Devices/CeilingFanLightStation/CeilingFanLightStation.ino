@@ -107,7 +107,7 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
 
 <script type='text/javascript'>
 
-    var url = 'http://192.168.0.25/';
+    var url = 'http://192.168.0.49/';
 
     jQuery.ajaxSetup({
         beforeSend: function () {
